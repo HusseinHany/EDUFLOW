@@ -1,12 +1,1976 @@
-/*
- * FILE : main.cpp
- * DESCRIPTION : This file's purpose as much as to implement the main interface to the system. Complete description and implementation
- for functionality and requirements are outlined in the particular repository update notes.
- */
-#include<iostream>
-using namespace std;
-// Function prototypes or other includes based required instruction of Prompt FILE 
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <algorithm>
+#include <iomanip>
+#include <ctime>
+#include <cmath>
+#include <stdexcept>
 
+using namespace std;
+
+// ============ ENUMERATIONS ============
+enum class Difficulty { BEGINNER, INTERMEDIATE, ADVANCED };
+enum class SkillLevel { NOVICE, INTERMEDIATE_LEARNER, PROFICIENT, EXPERT };
+enum class UserRole { STUDENT, ADMIN, DOCTOR };
+enum class ScheduleDay { MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY };
+
+// ============ UTILITY FUNCTIONS ============
+string difficultyToStr(Difficulty d) {
+    switch (d) {
+    case Difficulty::BEGINNER: return "Beginner";
+    case Difficulty::INTERMEDIATE: return "Intermediate";
+    case Difficulty::ADVANCED: return "Advanced";
+    }
+    return "";
+}
+
+Difficulty strToDifficulty(const string& s) {
+    if (s == "Beginner") return Difficulty::BEGINNER;
+    if (s == "Intermediate") return Difficulty::INTERMEDIATE;
+    if (s == "Advanced") return Difficulty::ADVANCED;
+    return Difficulty::BEGINNER;
+}
+
+string skillLevelToStr(SkillLevel s) {
+    switch (s) {
+    case SkillLevel::NOVICE: return "Novice";
+    case SkillLevel::INTERMEDIATE_LEARNER: return "Intermediate";
+    case SkillLevel::PROFICIENT: return "Proficient";
+    case SkillLevel::EXPERT: return "Expert";
+    }
+    return "";
+}
+
+SkillLevel strToSkillLevel(const string& s) {
+    if (s == "Novice") return SkillLevel::NOVICE;
+    if (s == "Intermediate") return SkillLevel::INTERMEDIATE_LEARNER;
+    if (s == "Proficient") return SkillLevel::PROFICIENT;
+    if (s == "Expert") return SkillLevel::EXPERT;
+    return SkillLevel::NOVICE;
+}
+
+string dayToStr(ScheduleDay d) {
+    switch (d) {
+    case ScheduleDay::MONDAY: return "Monday";
+    case ScheduleDay::TUESDAY: return "Tuesday";
+    case ScheduleDay::WEDNESDAY: return "Wednesday";
+    case ScheduleDay::THURSDAY: return "Thursday";
+    case ScheduleDay::FRIDAY: return "Friday";
+    case ScheduleDay::SATURDAY: return "Saturday";
+    case ScheduleDay::SUNDAY: return "Sunday";
+    }
+    return "";
+}
+
+ScheduleDay strToDay(const string& s) {
+    if (s == "Monday") return ScheduleDay::MONDAY;
+    if (s == "Tuesday") return ScheduleDay::TUESDAY;
+    if (s == "Wednesday") return ScheduleDay::WEDNESDAY;
+    if (s == "Thursday") return ScheduleDay::THURSDAY;
+    if (s == "Friday") return ScheduleDay::FRIDAY;
+    if (s == "Saturday") return ScheduleDay::SATURDAY;
+    if (s == "Sunday") return ScheduleDay::SUNDAY;
+    return ScheduleDay::MONDAY;
+}
+
+vector<string> split(const string& str, char delimiter) {
+    vector<string> tokens;
+    stringstream ss(str);
+    string token;
+    while (getline(ss, token, delimiter)) {
+        if (!token.empty()) tokens.push_back(token);
+    }
+    return tokens;
+}
+
+string trim(const string& str) {
+    size_t first = str.find_first_not_of(" \t\n\r");
+    if (first == string::npos) return "";
+    size_t last = str.find_last_not_of(" \t\n\r");
+    return str.substr(first, (last - first + 1));
+}
+
+// ============ COURSE CLASS ============
+class Course {
+public:
+    int id;
+    string name;
+    Difficulty difficulty;
+    int durationWeeks;
+    string category;
+    vector<int> prerequisites;
+    vector<string> skills;
+    double aiScore;
+    bool completed;
+    int hoursPerWeek;
+    string instructor;
+    string description;
+    double rating;
+    int enrollmentCount;
+
+    Course() : id(0), difficulty(Difficulty::BEGINNER), durationWeeks(0),
+        aiScore(0.0), completed(false), hoursPerWeek(5), rating(0.0), enrollmentCount(0) {
+    }
+
+    Course(int i, string n, Difficulty d, int dur, string cat, vector<int> prereqs,
+        vector<string> sk, int hrs = 5, string inst = "Instructor")
+        : id(i), name(n), difficulty(d), durationWeeks(dur), category(cat),
+        prerequisites(prereqs), skills(sk), aiScore(0.0), completed(false),
+        hoursPerWeek(hrs), instructor(inst), rating(0.0), enrollmentCount(0) {
+    }
+
+    void display() const {
+        cout << "  [" << id << "] " << name << " (" << difficultyToStr(difficulty) << ")\n";
+        cout << "      Category: " << category << " | Duration: " << durationWeeks << " weeks\n";
+        cout << "      Hours/Week: " << hoursPerWeek << " | Instructor: " << instructor << "\n";
+        cout << "      AI Score: " << fixed << setprecision(2) << aiScore;
+        cout << " | Rating: " << rating << "/5.0 | Enrolled: " << enrollmentCount << "\n";
+        if (!description.empty()) {
+            cout << "      Description: " << description << "\n";
+        }
+    }
+
+    string serialize() const {
+        stringstream ss;
+        ss << id << "|" << name << "|" << (int)difficulty << "|" << durationWeeks << "|"
+           << category << "|";
+        
+        for (size_t i = 0; i < prerequisites.size(); i++) {
+            ss << prerequisites[i];
+            if (i < prerequisites.size() - 1) ss << ",";
+        }
+        ss << "|";
+        
+        for (size_t i = 0; i < skills.size(); i++) {
+            ss << skills[i];
+            if (i < skills.size() - 1) ss << ",";
+        }
+        ss << "|" << hoursPerWeek << "|" << instructor << "|" << aiScore << "|"
+           << completed << "|" << description << "|" << rating << "|" << enrollmentCount;
+        
+        return ss.str();
+    }
+
+    static Course* deserialize(const string& line) {
+        vector<string> parts = split(line, '|');
+        if (parts.size() < 13) return nullptr;
+
+        Course* c = new Course();
+        c->id = stoi(parts[0]);
+        c->name = parts[1];
+        c->difficulty = (Difficulty)stoi(parts[2]);
+        c->durationWeeks = stoi(parts[3]);
+        c->category = parts[4];
+        
+        if (!parts[5].empty()) {
+            vector<string> prereqs = split(parts[5], ',');
+            for (const string& p : prereqs) {
+                c->prerequisites.push_back(stoi(p));
+            }
+        }
+        
+        if (!parts[6].empty()) {
+            c->skills = split(parts[6], ',');
+        }
+        
+        c->hoursPerWeek = stoi(parts[7]);
+        c->instructor = parts[8];
+        c->aiScore = stod(parts[9]);
+        c->completed = stoi(parts[10]);
+        c->description = parts[11];
+        c->rating = stod(parts[12]);
+        c->enrollmentCount = stoi(parts[13]);
+        
+        return c;
+    }
+};
+
+// ============ SCHEDULE SLOT CLASS ============
+class ScheduleSlot {
+public:
+    ScheduleDay day;
+    int startHour;
+    int duration;
+    int courseId;
+    string courseName;
+    string activity;
+
+    ScheduleSlot(ScheduleDay d, int start, int dur, int cid, string cname, string act)
+        : day(d), startHour(start), duration(dur), courseId(cid),
+        courseName(cname), activity(act) {
+    }
+
+    void display() const {
+        cout << "    " << dayToStr(day) << " "
+            << setfill('0') << setw(2) << startHour << ":00 - "
+            << setw(2) << (startHour + duration) << ":00"
+            << " | " << courseName << " (" << activity << ")\n";
+    }
+
+    string serialize() const {
+        stringstream ss;
+        ss << (int)day << "," << startHour << "," << duration << ","
+           << courseId << "," << courseName << "," << activity;
+        return ss.str();
+    }
+
+    static ScheduleSlot deserialize(const string& line) {
+        vector<string> parts = split(line, ',');
+        return ScheduleSlot(
+            (ScheduleDay)stoi(parts[0]),
+            stoi(parts[1]),
+            stoi(parts[2]),
+            stoi(parts[3]),
+            parts[4],
+            parts[5]
+        );
+    }
+};
+
+// ============ WEEKLY SCHEDULE CLASS ============
+class WeeklySchedule {
+private:
+    vector<ScheduleSlot> slots;
+    map<ScheduleDay, int> dailyHours;
+    int totalHoursPerWeek;
+
+public:
+    WeeklySchedule() : totalHoursPerWeek(0) {
+        for (int i = 0; i < 7; i++) {
+            dailyHours[(ScheduleDay)i] = 0;
+        }
+    }
+
+    bool addSlot(const ScheduleSlot& slot) {
+        for (const auto& existing : slots) {
+            if (existing.day == slot.day) {
+                int existingEnd = existing.startHour + existing.duration;
+                int newEnd = slot.startHour + slot.duration;
+
+                if ((slot.startHour >= existing.startHour && slot.startHour < existingEnd) ||
+                    (newEnd > existing.startHour && newEnd <= existingEnd) ||
+                    (slot.startHour <= existing.startHour && newEnd >= existingEnd)) {
+                    return false;
+                }
+            }
+        }
+
+        slots.push_back(slot);
+        dailyHours[slot.day] += slot.duration;
+        totalHoursPerWeek += slot.duration;
+        return true;
+    }
+
+    void display() const {
+        cout << "\n========== WEEKLY SCHEDULE ==========\n";
+        cout << "Total Hours: " << totalHoursPerWeek << " hours/week\n\n";
+
+        for (int i = 0; i < 7; i++) {
+            ScheduleDay day = (ScheduleDay)i;
+            cout << "  " << dayToStr(day) << " (" << dailyHours.at(day) << " hours):\n";
+
+            bool hasSlots = false;
+            for (const auto& slot : slots) {
+                if (slot.day == day) {
+                    slot.display();
+                    hasSlots = true;
+                }
+            }
+            if (!hasSlots) {
+                cout << "    No classes scheduled\n";
+            }
+            cout << "\n";
+        }
+        cout << "====================================\n\n";
+    }
+
+    int getTotalHours() const { return totalHoursPerWeek; }
+    vector<ScheduleSlot> getSlots() const { return slots; }
+    void clear() { 
+        slots.clear(); 
+        totalHoursPerWeek = 0;
+        for (int i = 0; i < 7; i++) {
+            dailyHours[(ScheduleDay)i] = 0;
+        }
+    }
+
+    string serialize() const {
+        stringstream ss;
+        ss << slots.size() << "\n";
+        for (const auto& slot : slots) {
+            ss << slot.serialize() << "\n";
+        }
+        return ss.str();
+    }
+
+    void deserialize(ifstream& file) {
+        clear();
+        int count;
+        file >> count;
+        file.ignore();
+        
+        for (int i = 0; i < count; i++) {
+            string line;
+            getline(file, line);
+            if (!line.empty()) {
+                ScheduleSlot slot = ScheduleSlot::deserialize(line);
+                addSlot(slot);
+            }
+        }
+    }
+};
+
+// ============ PROGRESS REPORT CLASS ============
+class ProgressReport {
+public:
+    string studentName;
+    int completedCourses;
+    int totalCourses;
+    double averageScore;
+    int totalStudyHours;
+    vector<string> completedSkills;
+    vector<string> recommendations;
+    string mentalHealthNote;
+    int stressLevel;
+
+    ProgressReport() : completedCourses(0), totalCourses(0), averageScore(0.0),
+        totalStudyHours(0), stressLevel(5) {
+    }
+
+    void display() const {
+        cout << "\n========== PROGRESS REPORT ==========\n";
+        cout << "Student: " << studentName << "\n";
+        cout << "Completion: " << completedCourses << "/" << totalCourses
+            << " (" << fixed << setprecision(1)
+            << (totalCourses > 0 ? (completedCourses * 100.0 / totalCourses) : 0.0) << "%)\n";
+        cout << "Average Score: " << averageScore << "/100\n";
+        cout << "Total Study Hours: " << totalStudyHours << " hours\n";
+        cout << "Stress Level: " << stressLevel << "/10\n";
+
+        if (!completedSkills.empty()) {
+            cout << "\nAcquired Skills:\n";
+            for (const auto& skill : completedSkills) {
+                cout << "  * " << skill << "\n";
+            }
+        }
+
+        if (!recommendations.empty()) {
+            cout << "\nRecommendations:\n";
+            for (const auto& rec : recommendations) {
+                cout << "  - " << rec << "\n";
+            }
+        }
+
+        if (!mentalHealthNote.empty()) {
+            cout << "\nDoctor's Note: " << mentalHealthNote << "\n";
+        }
+        cout << "====================================\n\n";
+    }
+};
+
+// ============ AVL TREE NODE ============
+class AVLNode {
+public:
+    Course* course;
+    AVLNode* left;
+    AVLNode* right;
+    int height;
+
+    AVLNode(Course* c) : course(c), left(nullptr), right(nullptr), height(1) {}
+};
+
+// ============ AVL TREE CLASS ============
+class AVLTree {
+private:
+    AVLNode* root;
+
+    int getHeight(AVLNode* node) { return node ? node->height : 0; }
+    int getBalance(AVLNode* node) { return node ? getHeight(node->left) - getHeight(node->right) : 0; }
+    void updateHeight(AVLNode* node) {
+        if (node) node->height = 1 + max(getHeight(node->left), getHeight(node->right));
+    }
+
+    AVLNode* rotateRight(AVLNode* y) {
+        AVLNode* x = y->left;
+        AVLNode* T2 = x->right;
+        x->right = y;
+        y->left = T2;
+        updateHeight(y);
+        updateHeight(x);
+        return x;
+    }
+
+    AVLNode* rotateLeft(AVLNode* x) {
+        AVLNode* y = x->right;
+        AVLNode* T2 = y->left;
+        y->left = x;
+        x->right = T2;
+        updateHeight(x);
+        updateHeight(y);
+        return y;
+    }
+
+    AVLNode* insertRecursive(AVLNode* node, Course* course) {
+        if (!node) return new AVLNode(course);
+
+        if (course->aiScore < node->course->aiScore)
+            node->left = insertRecursive(node->left, course);
+        else if (course->aiScore > node->course->aiScore)
+            node->right = insertRecursive(node->right, course);
+        else
+            return node;
+
+        updateHeight(node);
+        int balance = getBalance(node);
+
+        if (balance > 1 && course->aiScore < node->left->course->aiScore)
+            return rotateRight(node);
+        if (balance < -1 && course->aiScore > node->right->course->aiScore)
+            return rotateLeft(node);
+        if (balance > 1 && course->aiScore > node->left->course->aiScore) {
+            node->left = rotateLeft(node->left);
+            return rotateRight(node);
+        }
+        if (balance < -1 && course->aiScore < node->right->course->aiScore) {
+            node->right = rotateRight(node->right);
+            return rotateLeft(node);
+        }
+
+        return node;
+    }
+
+    void inorderTraversal(AVLNode* node, vector<Course*>& result) {
+        if (!node) return;
+        inorderTraversal(node->right, result);
+        result.push_back(node->course);
+        inorderTraversal(node->left, result);
+    }
+
+    void deleteTree(AVLNode* node) {
+        if (!node) return;
+        deleteTree(node->left);
+        deleteTree(node->right);
+        delete node;
+    }
+
+public:
+    AVLTree() : root(nullptr) {}
+    ~AVLTree() { deleteTree(root); }
+
+    void insert(Course* course) { root = insertRecursive(root, course); }
+
+    vector<Course*> getSortedCourses() {
+        vector<Course*> result;
+        inorderTraversal(root, result);
+        return result;
+    }
+
+    void clear() {
+        deleteTree(root);
+        root = nullptr;
+    }
+};
+
+// ============ BST NODE ============
+class BSTNode {
+public:
+    int key;
+    Course* course;
+    BSTNode* left;
+    BSTNode* right;
+
+    BSTNode(int k, Course* c) : key(k), course(c), left(nullptr), right(nullptr) {}
+};
+
+// ============ BST CLASS ============
+class BST {
+private:
+    BSTNode* root;
+
+    BSTNode* insertRecursive(BSTNode* node, int key, Course* course) {
+        if (!node) return new BSTNode(key, course);
+        if (key < node->key) node->left = insertRecursive(node->left, key, course);
+        else if (key > node->key) node->right = insertRecursive(node->right, key, course);
+        return node;
+    }
+
+    Course* searchRecursive(BSTNode* node, int key) {
+        if (!node) return nullptr;
+        if (key == node->key) return node->course;
+        if (key < node->key) return searchRecursive(node->left, key);
+        return searchRecursive(node->right, key);
+    }
+
+    void deleteTree(BSTNode* node) {
+        if (!node) return;
+        deleteTree(node->left);
+        deleteTree(node->right);
+        delete node;
+    }
+
+public:
+    BST() : root(nullptr) {}
+    ~BST() { deleteTree(root); }
+
+    void insert(int key, Course* course) { root = insertRecursive(root, key, course); }
+    Course* search(int courseId) { return searchRecursive(root, courseId); }
+    
+    void clear() {
+        deleteTree(root);
+        root = nullptr;
+    }
+};
+
+// ============ GRAPH CLASS ============
+class Graph {
+private:
+    map<int, vector<int>> adjList;
+    map<int, vector<int>> prerequisites;
+
+    bool hasCycleDFS(int node, map<int, int>& visited) {
+        visited[node] = 1;
+        for (int neighbor : adjList[node]) {
+            if (visited[neighbor] == 1) return true;
+            if (visited[neighbor] == 0 && hasCycleDFS(neighbor, visited)) return true;
+        }
+        visited[node] = 2;
+        return false;
+    }
+
+public:
+    void addCourse(int courseId) {
+        if (adjList.find(courseId) == adjList.end()) {
+            adjList[courseId] = vector<int>();
+            prerequisites[courseId] = vector<int>();
+        }
+    }
+
+    void addPrerequisite(int courseId, int prereqId) {
+        prerequisites[courseId].push_back(prereqId);
+        adjList[prereqId].push_back(courseId);
+    }
+
+    bool hasCycle() {
+        map<int, int> visited;
+        for (auto& pair : adjList) {
+            if (visited[pair.first] == 0) {
+                if (hasCycleDFS(pair.first, visited)) return true;
+            }
+        }
+        return false;
+    }
+
+    bool canTakeCourse(int courseId, vector<int>& completedCourses) {
+        for (int prereq : prerequisites[courseId]) {
+            if (find(completedCourses.begin(), completedCourses.end(), prereq) == completedCourses.end()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    vector<int> getPrerequisites(int courseId) { return prerequisites[courseId]; }
+    vector<int> getNextCourses(int courseId) { return adjList[courseId]; }
+    
+    void clear() {
+        adjList.clear();
+        prerequisites.clear();
+    }
+};
+
+// ============ LINKED LIST NODE ============
+class ListNode {
+public:
+    int courseId;
+    string courseName;
+    double score;
+    time_t completionDate;
+    ListNode* next;
+    ListNode* prev;
+
+    ListNode(int id, string name, double s)
+        : courseId(id), courseName(name), score(s), next(nullptr), prev(nullptr) {
+        time(&completionDate);
+    }
+};
+
+// ============ LINKED LIST CLASS ============
+class LinkedList {
+private:
+    ListNode* head;
+    ListNode* tail;
+    int size;
+
+public:
+    LinkedList() : head(nullptr), tail(nullptr), size(0) {}
+
+    ~LinkedList() {
+        ListNode* current = head;
+        while (current) {
+            ListNode* temp = current;
+            current = current->next;
+            delete temp;
+        }
+    }
+
+    void append(int courseId, string courseName, double score) {
+        ListNode* newNode = new ListNode(courseId, courseName, score);
+        if (!head) {
+            head = tail = newNode;
+        }
+        else {
+            tail->next = newNode;
+            newNode->prev = tail;
+            tail = newNode;
+        }
+        size++;
+    }
+
+    void display() {
+        cout << "\n========== Completed Courses History ==========\n";
+        ListNode* current = head;
+        int count = 1;
+        while (current) {
+            cout << count++ << ". " << current->courseName
+                << " (ID: " << current->courseId << ") - Score: "
+                << fixed << setprecision(1) << current->score << "/100\n";
+            current = current->next;
+        }
+        if (size == 0) cout << "No completed courses yet.\n";
+        cout << "=============================================\n\n";
+    }
+
+    double getAverageScore() {
+        if (size == 0) return 0.0;
+        double total = 0.0;
+        ListNode* current = head;
+        while (current) {
+            total += current->score;
+            current = current->next;
+        }
+        return total / size;
+    }
+
+    int getSize() const { return size; }
+
+    string serialize() const {
+        stringstream ss;
+        ss << size << "\n";
+        ListNode* current = head;
+        while (current) {
+            ss << current->courseId << "," << current->courseName << ","
+               << current->score << "," << current->completionDate << "\n";
+            current = current->next;
+        }
+        return ss.str();
+    }
+
+    void deserialize(ifstream& file) {
+        int count;
+        file >> count;
+        file.ignore();
+        
+        for (int i = 0; i < count; i++) {
+            string line;
+            getline(file, line);
+            if (!line.empty()) {
+                vector<string> parts = split(line, ',');
+                if (parts.size() >= 3) {
+                    append(stoi(parts[0]), parts[1], stod(parts[2]));
+                }
+            }
+        }
+    }
+
+    void clear() {
+        ListNode* current = head;
+        while (current) {
+            ListNode* temp = current;
+            current = current->next;
+            delete temp;
+        }
+        head = tail = nullptr;
+        size = 0;
+    }
+};
+
+// ============ PATH STACK CLASS ============
+class PathStack {
+private:
+    stack<int> pathStack;
+    vector<int> currentPath;
+
+public:
+    void push(int courseId) {
+        pathStack.push(courseId);
+        currentPath.push_back(courseId);
+    }
+
+    int pop() {
+        if (!pathStack.empty()) {
+            int courseId = pathStack.top();
+            pathStack.pop();
+            if (!currentPath.empty()) currentPath.pop_back();
+            return courseId;
+        }
+        return -1;
+    }
+
+    bool isEmpty() { return pathStack.empty(); }
+    vector<int> getPath() { return currentPath; }
+    void clear() {
+        while (!pathStack.empty()) pathStack.pop();
+        currentPath.clear();
+    }
+};
+
+// ============ DEPTH LIMITED SEARCH CLASS ============
+class DepthLimitedSearch {
+private:
+    Graph* graph;
+    map<int, Course*>* courseMap;
+
+    void generatePathRecursive(int courseId, int depth, int limit, vector<int>& path,
+        map<int, bool>& visited, vector<int>& completedCourses) {
+        if (depth > limit || path.size() >= 10) return;
+
+        if (!visited[courseId] && graph->canTakeCourse(courseId, completedCourses)) {
+            visited[courseId] = true;
+            path.push_back(courseId);
+            completedCourses.push_back(courseId);
+
+            for (int nextId : graph->getNextCourses(courseId)) {
+                if (!visited[nextId]) {
+                    generatePathRecursive(nextId, depth + 1, limit, path, visited, completedCourses);
+                }
+            }
+        }
+    }
+
+public:
+    DepthLimitedSearch(Graph* g, map<int, Course*>* cm) : graph(g), courseMap(cm) {}
+
+    vector<int> generateLimitedPath(int startId, int depthLimit, vector<int>& completedCourses) {
+        vector<int> path;
+        map<int, bool> visited;
+
+        for (int id : completedCourses) visited[id] = true;
+
+        generatePathRecursive(startId, 0, depthLimit, path, visited, completedCourses);
+        return path;
+    }
+};
+
+// ============ AI ENGINE CLASS ============
+class AIEngine {
+public:
+    static double calculateAIScore(Course* course, const map<string, int>& studentSkills,
+        SkillLevel skillLevel, string learningGoal,
+        int availableHours, vector<int>& completedCourses) {
+        double score = 0.0;
+
+        // Goal alignment (35%)
+        if (course->category == learningGoal) score += 35.0;
+        else if (course->category.find(learningGoal) != string::npos) score += 20.0;
+
+        // Difficulty match (30%)
+        switch (skillLevel) {
+        case SkillLevel::NOVICE:
+            if (course->difficulty == Difficulty::BEGINNER) score += 30.0;
+            else if (course->difficulty == Difficulty::INTERMEDIATE) score += 10.0;
+            break;
+        case SkillLevel::INTERMEDIATE_LEARNER:
+            if (course->difficulty == Difficulty::BEGINNER) score += 15.0;
+            else if (course->difficulty == Difficulty::INTERMEDIATE) score += 30.0;
+            else if (course->difficulty == Difficulty::ADVANCED) score += 10.0;
+            break;
+        case SkillLevel::PROFICIENT:
+            if (course->difficulty == Difficulty::INTERMEDIATE) score += 20.0;
+            else if (course->difficulty == Difficulty::ADVANCED) score += 30.0;
+            break;
+        case SkillLevel::EXPERT:
+            if (course->difficulty == Difficulty::ADVANCED) score += 30.0;
+            else score += 15.0;
+            break;
+        }
+
+        // Time feasibility (20%)
+        if (course->hoursPerWeek <= availableHours) score += 20.0;
+        else if (course->hoursPerWeek <= availableHours * 1.5) score += 10.0;
+
+        // Prerequisites completion (15%)
+        bool allPrereqsComplete = true;
+        for (int prereq : course->prerequisites) {
+            if (find(completedCourses.begin(), completedCourses.end(), prereq) == completedCourses.end()) {
+                allPrereqsComplete = false;
+                break;
+            }
+        }
+        if (allPrereqsComplete) score += 15.0;
+
+        return score;
+    }
+};
+
+// ============ STUDENT CLASS ============
+class Student {
+public:
+    int id;
+    string name;
+    string email;
+    SkillLevel skillLevel;
+    string learningGoal;
+    int availableHours;
+    vector<int> completedCourses;
+    LinkedList completedHistory;
+    map<string, int> skills;
+    WeeklySchedule schedule;
+    int stressLevel;
+    vector<string> concerns;
+    string mentalHealthNote;
+
+    Student() : id(0), skillLevel(SkillLevel::NOVICE), availableHours(10), stressLevel(5) {}
+
+    Student(int i, string n, string e, SkillLevel level, string goal, int hours)
+        : id(i), name(n), email(e), skillLevel(level), learningGoal(goal),
+        availableHours(hours), stressLevel(5) {
+    }
+
+    void completeCourse(int courseId, string courseName, double score, vector<string>& courseSkills) {
+        completedCourses.push_back(courseId);
+        completedHistory.append(courseId, courseName, score);
+
+        for (const string& skill : courseSkills) {
+            if (skills.find(skill) == skills.end()) {
+                skills[skill] = 30;
+            }
+            else {
+                skills[skill] = min(100, skills[skill] + 20);
+            }
+        }
+
+        int count = completedCourses.size();
+        if (count >= 3 && skillLevel == SkillLevel::NOVICE) {
+            skillLevel = SkillLevel::INTERMEDIATE_LEARNER;
+            cout << "Skill level upgraded to: Intermediate!\n";
+        }
+        else if (count >= 6 && skillLevel == SkillLevel::INTERMEDIATE_LEARNER) {
+            skillLevel = SkillLevel::PROFICIENT;
+            cout << "Skill level upgraded to: Proficient!\n";
+        }
+        else if (count >= 10 && skillLevel == SkillLevel::PROFICIENT) {
+            skillLevel = SkillLevel::EXPERT;
+            cout << "Skill level upgraded to: Expert!\n";
+        }
+    }
+
+    void displayProfile() {
+        cout << "\n========== STUDENT PROFILE ==========\n";
+        cout << "ID: " << id << "\n";
+        cout << "Name: " << name << "\n";
+        cout << "Email: " << email << "\n";
+        cout << "Skill Level: " << skillLevelToStr(skillLevel) << "\n";
+        cout << "Learning Goal: " << learningGoal << "\n";
+        cout << "Available Time: " << availableHours << " hours/week\n";
+        cout << "Completed Courses: " << completedCourses.size() << "\n";
+        cout << "Stress Level: " << stressLevel << "/10\n";
+
+        if (!skills.empty()) {
+            cout << "\nSkills:\n";
+            for (const auto& pair : skills) {
+                cout << "  - " << pair.first << ": " << pair.second << "%\n";
+            }
+        }
+        cout << "====================================\n\n";
+    }
+
+    ProgressReport generateReport(int totalCourses) {
+        ProgressReport report;
+        report.studentName = name;
+        report.completedCourses = completedCourses.size();
+        report.totalCourses = totalCourses;
+        report.averageScore = completedHistory.getAverageScore();
+        report.totalStudyHours = schedule.getTotalHours() * 4;
+        report.stressLevel = stressLevel;
+        report.mentalHealthNote = mentalHealthNote;
+
+        for (const auto& pair : skills) {
+            report.completedSkills.push_back(pair.first + " (" + to_string(pair.second) + "%)");
+        }
+
+        if (stressLevel >= 7) {
+            report.recommendations.push_back("Consider reducing course load");
+            report.recommendations.push_back("Schedule breaks between study sessions");
+        }
+        if (completedHistory.getAverageScore() < 70) {
+            report.recommendations.push_back("Review fundamental concepts");
+            report.recommendations.push_back("Seek tutoring or study groups");
+        }
+        if (schedule.getTotalHours() > availableHours) {
+            report.recommendations.push_back("Adjust schedule to match available time");
+        }
+
+        return report;
+    }
+
+    void saveToFile(const string& filename) {
+        ofstream file(filename);
+        if (!file.is_open()) {
+            throw runtime_error("Cannot open file: " + filename);
+        }
+
+        file << id << "\n" << name << "\n" << email << "\n"
+             << skillLevelToStr(skillLevel) << "\n" << learningGoal << "\n"
+             << availableHours << "\n" << stressLevel << "\n";
+
+        file << completedCourses.size() << "\n";
+        for (int cid : completedCourses) {
+            file << cid << " ";
+        }
+        file << "\n";
+
+        file << skills.size() << "\n";
+        for (const auto& pair : skills) {
+            file << pair.first << "," << pair.second << "\n";
+        }
+
+        file << mentalHealthNote << "\n";
+        
+        file << completedHistory.serialize();
+        file << schedule.serialize();
+
+        file.close();
+    }
+
+    static Student* loadFromFile(const string& filename) {
+        ifstream file(filename);
+        if (!file.is_open()) {
+            throw runtime_error("Cannot open file: " + filename);
+        }
+
+        Student* s = new Student();
+        string line;
+
+        file >> s->id;
+        file.ignore();
+        getline(file, s->name);
+        getline(file, s->email);
+        getline(file, line);
+        s->skillLevel = strToSkillLevel(line);
+        getline(file, s->learningGoal);
+        file >> s->availableHours >> s->stressLevel;
+        file.ignore();
+
+        int completedCount;
+        file >> completedCount;
+        s->completedCourses.resize(completedCount);
+        for (int i = 0; i < completedCount; i++) {
+            file >> s->completedCourses[i];
+        }
+        file.ignore();
+
+        int skillCount;
+        file >> skillCount;
+        file.ignore();
+        for (int i = 0; i < skillCount; i++) {
+            getline(file, line);
+            vector<string> parts = split(line, ',');
+            if (parts.size() == 2) {
+                s->skills[parts[0]] = stoi(parts[1]);
+            }
+        }
+
+        getline(file, s->mentalHealthNote);
+        
+        s->completedHistory.deserialize(file);
+        s->schedule.deserialize(file);
+
+        file.close();
+        return s;
+    }
+};
+
+// ============ SCHEDULE GENERATOR CLASS ============
+class ScheduleGenerator {
+public:
+    static WeeklySchedule generateSchedule(vector<Course*>& courses, Student& student) {
+        WeeklySchedule schedule;
+
+        int hoursPerDay = max(1, student.availableHours / 5);
+        vector<ScheduleDay> weekdays = {
+            ScheduleDay::MONDAY, ScheduleDay::TUESDAY, ScheduleDay::WEDNESDAY,
+            ScheduleDay::THURSDAY, ScheduleDay::FRIDAY
+        };
+
+        int dayIndex = 0;
+        int startHour = 18;
+
+        for (Course* course : courses) {
+            int hoursNeeded = course->hoursPerWeek;
+
+            while (hoursNeeded > 0 && dayIndex < weekdays.size()) {
+                int hoursThisSlot = min(hoursNeeded, 2);
+
+                ScheduleSlot slot(weekdays[dayIndex], startHour, hoursThisSlot,
+                    course->id, course->name, "Study");
+
+                if (schedule.addSlot(slot)) {
+                    hoursNeeded -= hoursThisSlot;
+                }
+
+                dayIndex++;
+                if (dayIndex >= weekdays.size()) {
+                    dayIndex = 0;
+                    startHour = (startHour + 2) % 24;
+                    if (startHour < 8) startHour = 18;
+                }
+            }
+        }
+
+        return schedule;
+    }
+};
+
+// ============ FILE MANAGER CLASS ============
+class FileManager {
+public:
+    static void saveCourses(const vector<Course*>& courses, const string& filename = "data/courses.txt") {
+        ofstream file(filename);
+        if (!file.is_open()) {
+            throw runtime_error("Cannot create courses file");
+        }
+
+        file << courses.size() << "\n";
+        for (const Course* c : courses) {
+            file << c->serialize() << "\n";
+        }
+        file.close();
+        cout << "Courses saved successfully to " << filename << "\n";
+    }
+
+    static vector<Course*> loadCourses(const string& filename = "data/courses.txt") {
+        vector<Course*> courses;
+        ifstream file(filename);
+        if (!file.is_open()) {
+            throw runtime_error("Cannot open courses file");
+        }
+
+        int count;
+        file >> count;
+        file.ignore();
+
+        for (int i = 0; i < count; i++) {
+            string line;
+            getline(file, line);
+            if (!line.empty()) {
+                Course* c = Course::deserialize(line);
+                if (c) courses.push_back(c);
+            }
+        }
+
+        file.close();
+        cout << "Loaded " << courses.size() << " courses from " << filename << "\n";
+        return courses;
+    }
+
+    static void saveAllStudents(const map<int, Student*>& students) {
+        ofstream indexFile("data/students_index.txt");
+        if (!indexFile.is_open()) {
+            throw runtime_error("Cannot create students index file");
+        }
+
+        indexFile << students.size() << "\n";
+        for (const auto& pair : students) {
+            string filename = "data/student_" + to_string(pair.first) + ".txt";
+            indexFile << pair.first << "," << filename << "\n";
+            pair.second->saveToFile(filename);
+        }
+        indexFile.close();
+        cout << "Saved " << students.size() << " student profiles\n";
+    }
+
+    static map<int, Student*> loadAllStudents() {
+        map<int, Student*> students;
+        ifstream indexFile("data/students_index.txt");
+        if (!indexFile.is_open()) {
+            throw runtime_error("Cannot open students index file");
+        }
+
+        int count;
+        indexFile >> count;
+        indexFile.ignore();
+
+        for (int i = 0; i < count; i++) {
+            string line;
+            getline(indexFile, line);
+            vector<string> parts = split(line, ',');
+            if (parts.size() == 2) {
+                int id = stoi(parts[0]);
+                try {
+                    Student* s = Student::loadFromFile(parts[1]);
+                    students[id] = s;
+                } catch (exception& e) {
+                    cerr << "Error loading student " << id << ": " << e.what() << "\n";
+                }
+            }
+        }
+
+        indexFile.close();
+        cout << "Loaded " << students.size() << " student profiles\n";
+        return students;
+    }
+
+    static void createDataDirectory() {
+        #ifdef _WIN32
+            system("if not exist data mkdir data");
+        #else
+            system("mkdir -p data");
+        #endif
+    }
+};
+
+// ============ UI MANAGER CLASS ============
+class UIManager {
+private:
+    void clearScreen() {
+        #ifdef _WIN32
+            system("cls");
+        #else
+            system("clear");
+        #endif
+    }
+
+public:
+    void displayWelcome() {
+        clearScreen();
+        cout << "\n";
+        cout << "========================================================\n";
+        cout << "                                                        \n";
+        cout << "    ** PERSONALIZED AI LEARNING PATH GENERATOR **       \n";
+        cout << "                                                        \n";
+        cout << "        Smart Scheduling - Progress Tracking           \n";
+        cout << "        Multi-Role Interface - AI-Powered              \n";
+        cout << "                                                        \n";
+        cout << "========================================================\n\n";
+    }
+
+    int displayRoleSelection() {
+        cout << "\n========== SELECT YOUR ROLE ==========\n";
+        cout << "\n  1. Student Portal\n";
+        cout << "  2. Admin Dashboard\n";
+        cout << "  3. Doctor/Counselor Interface\n";
+        cout << "  4. Exit\n\n";
+        cout << "--------------------------------------\n";
+        cout << "Enter choice: ";
+
+        int choice;
+        cin >> choice;
+        cin.ignore();
+        return choice;
+    }
+
+    void displayStudentMenu() {
+        cout << "\n========== STUDENT PORTAL ==========\n";
+        cout << "\n  1. View My Profile\n";
+        cout << "  2. View Available Courses\n";
+        cout << "  3. Get AI Recommendations\n";
+        cout << "  4. Generate Learning Path\n";
+        cout << "  5. View My Schedule\n";
+        cout << "  6. Complete a Course\n";
+        cout << "  7. View Progress Report\n";
+        cout << "  8. Search Course by ID\n";
+        cout << "  9. View Completed History\n";
+        cout << "  10. Save My Progress\n";
+        cout << "  11. Back to Main Menu\n\n";
+        cout << "------------------------------------\n";
+        cout << "Enter choice: ";
+    }
+
+    void displayAdminMenu() {
+        cout << "\n========== ADMIN DASHBOARD ==========\n";
+        cout << "\n  1. View All Students\n";
+        cout << "  2. Manage Courses\n";
+        cout << "  3. Add New Course\n";
+        cout << "  4. Remove Course\n";
+        cout << "  5. View System Statistics\n";
+        cout << "  6. Update Course Info\n";
+        cout << "  7. Backup All Data\n";
+        cout << "  8. Generate Reports for All\n";
+        cout << "  9. Load Data from Files\n";
+        cout << "  10. Back to Main Menu\n\n";
+        cout << "-------------------------------------\n";
+        cout << "Enter choice: ";
+    }
+
+    void displayDoctorMenu() {
+        cout << "\n========== DOCTOR/COUNSELOR INTERFACE ==========\n";
+        cout << "\n  1. View All Students\n";
+        cout << "  2. View Student Progress Report\n";
+        cout << "  3. Mental Health Assessment\n";
+        cout << "  4. Add Medical Note to Report\n";
+        cout << "  5. View High Stress Students\n";
+        cout << "  6. View Performance Analytics\n";
+        cout << "  7. Provide Recommendations\n";
+        cout << "  8. Review Student Schedule\n";
+        cout << "  9. Save Assessment Data\n";
+        cout << "  10. Back to Main Menu\n\n";
+        cout << "------------------------------------------------\n";
+        cout << "Enter choice: ";
+    }
+
+    void displaySuccess(const string& message) {
+        cout << "\n[SUCCESS] " << message << "\n\n";
+    }
+
+    void displayError(const string& message) {
+        cout << "\n[ERROR] " << message << "\n\n";
+    }
+
+    void displayInfo(const string& message) {
+        cout << "\n[INFO] " << message << "\n\n";
+    }
+
+    void waitForEnter() {
+        cout << "\nPress Enter to continue...";
+        cin.get();
+    }
+};
+
+// ============ MAIN SYSTEM CLASS ============
+class LearningPathSystem {
+private:
+    vector<Course*> allCourses;
+    map<int, Course*> courseMap;
+    map<int, Student*> students;
+    Student* currentStudent;
+    AVLTree avlTree;
+    BST bst;
+    Graph graph;
+    PathStack pathStack;
+    UIManager ui;
+    int nextStudentId;
+    int nextCourseId;
+
+public:
+    LearningPathSystem() : currentStudent(nullptr), nextStudentId(1), nextCourseId(11) {
+        FileManager::createDataDirectory();
+    }
+
+    ~LearningPathSystem() {
+        for (Course* c : allCourses) delete c;
+        for (auto& pair : students) delete pair.second;
+    }
+
+    void initializeSampleData() {
+        allCourses.push_back(new Course(1, "Intro to Programming", Difficulty::BEGINNER, 4,
+            "programming", {}, { "variables", "loops", "functions" }, 5, "Dr. Smith"));
+        allCourses.push_back(new Course(2, "Data Structures", Difficulty::INTERMEDIATE, 6,
+            "programming", { 1 }, { "arrays", "trees", "graphs" }, 8, "Dr. Johnson"));
+        allCourses.push_back(new Course(3, "Algorithms", Difficulty::INTERMEDIATE, 6,
+            "programming", { 2 }, { "sorting", "searching", "dp" }, 8, "Dr. Wilson"));
+        allCourses.push_back(new Course(4, "Web Development Basics", Difficulty::BEGINNER, 5,
+            "web", { 1 }, { "html", "css", "javascript" }, 6, "Prof. Brown"));
+        allCourses.push_back(new Course(5, "Frontend Frameworks", Difficulty::INTERMEDIATE, 7,
+            "web", { 4 }, { "react", "vue", "state" }, 10, "Prof. Davis"));
+        allCourses.push_back(new Course(6, "Backend Development", Difficulty::INTERMEDIATE, 8,
+            "web", { 4 }, { "nodejs", "databases", "api" }, 10, "Prof. Miller"));
+        allCourses.push_back(new Course(7, "Full Stack Projects", Difficulty::ADVANCED, 10,
+            "web", { 5, 6 }, { "deployment", "testing", "devops" }, 15, "Dr. Garcia"));
+        allCourses.push_back(new Course(8, "Machine Learning", Difficulty::INTERMEDIATE, 8,
+            "ml", { 1, 2 }, { "regression", "classification", "nn" }, 12, "Dr. Martinez"));
+        allCourses.push_back(new Course(9, "Deep Learning", Difficulty::ADVANCED, 10,
+            "ml", { 8 }, { "cnn", "rnn", "transformers" }, 15, "Dr. Rodriguez"));
+        allCourses.push_back(new Course(10, "Database Systems", Difficulty::INTERMEDIATE, 6,
+            "programming", { 1 }, { "sql", "nosql", "optimization" }, 7, "Prof. Lee"));
+
+        for (Course* c : allCourses) {
+            c->description = "Comprehensive course covering " + c->name;
+            c->rating = 4.0 + (rand() % 11) / 10.0;
+            c->enrollmentCount = 50 + (rand() % 150);
+        }
+
+        setupDataStructures();
+        ui.displaySuccess("Sample data initialized with 10 courses");
+        
+        try {
+            FileManager::saveCourses(allCourses);
+        } catch (exception& e) {
+            ui.displayError(string("Failed to save initial data: ") + e.what());
+        }
+    }
+
+    void setupDataStructures() {
+        avlTree.clear();
+        bst.clear();
+        graph.clear();
+        
+        for (Course* c : allCourses) {
+            courseMap[c->id] = c;
+            graph.addCourse(c->id);
+            bst.insert(c->id, c);
+
+            for (int prereq : c->prerequisites) {
+                graph.addPrerequisite(c->id, prereq);
+            }
+        }
+
+        if (graph.hasCycle()) {
+            ui.displayError("Cycle detected in course prerequisites!");
+        }
+    }
+
+    void createStudent() {
+        ui.displayInfo("Creating new student profile...");
+
+        string name, email, goal;
+        int skillLevelInt, hours;
+
+        cout << "Enter name: ";
+        getline(cin, name);
+        cout << "Enter email: ";
+        getline(cin, email);
+        cout << "Select skill level (0=Novice, 1=Intermediate, 2=Proficient, 3=Expert): ";
+        cin >> skillLevelInt;
+        cin.ignore();
+        cout << "Enter learning goal (programming/web/ml): ";
+        getline(cin, goal);
+        cout << "Available hours per week: ";
+        cin >> hours;
+        cin.ignore();
+
+        Student* student = new Student(nextStudentId++, name, email,
+            (SkillLevel)skillLevelInt, goal, hours);
+        students[student->id] = student;
+        currentStudent = student;
+
+        updateAIScores();
+        ui.displaySuccess("Student profile created successfully!");
+        
+        try {
+            student->saveToFile("data/student_" + to_string(student->id) + ".txt");
+        } catch (exception& e) {
+            ui.displayError(string("Failed to save student: ") + e.what());
+        }
+    }
+
+    void updateAIScores() {
+        if (!currentStudent) return;
+
+        avlTree.clear();
+        for (Course* c : allCourses) {
+            if (!c->completed) {
+                c->aiScore = AIEngine::calculateAIScore(c, currentStudent->skills,
+                    currentStudent->skillLevel, currentStudent->learningGoal,
+                    currentStudent->availableHours, currentStudent->completedCourses);
+                avlTree.insert(c);
+            }
+        }
+    }
+
+    void displayRecommendations() {
+        if (!currentStudent) {
+            ui.displayError("No student profile loaded");
+            return;
+        }
+
+        vector<Course*> sorted = avlTree.getSortedCourses();
+        cout << "\n========== TOP AI RECOMMENDATIONS ==========\n\n";
+
+        int count = 0;
+        for (Course* c : sorted) {
+            if (count >= 5) break;
+            if (graph.canTakeCourse(c->id, currentStudent->completedCourses)) {
+                cout << " " << (count + 1) << ". ";
+                c->display();
+                cout << "\n";
+                count++;
+            }
+        }
+        cout << "============================================\n\n";
+    }
+
+    void generateCustomizedPlan() {
+        if (!currentStudent) {
+            ui.displayError("No student profile loaded");
+            return;
+        }
+
+        cout << "\n========== GENERATING CUSTOMIZED PLAN ==========\n\n";
+
+        vector<Course*> recommendedCourses;
+        vector<Course*> sorted = avlTree.getSortedCourses();
+
+        for (Course* c : sorted) {
+            if (recommendedCourses.size() >= 3) break;
+            if (graph.canTakeCourse(c->id, currentStudent->completedCourses)) {
+                recommendedCourses.push_back(c);
+            }
+        }
+
+        if (recommendedCourses.empty()) {
+            ui.displayInfo("No suitable courses found. Complete prerequisites first.");
+            return;
+        }
+
+        pathStack.clear();
+        DepthLimitedSearch dls(&graph, &courseMap);
+        vector<int> tempCompleted = currentStudent->completedCourses;
+
+        for (Course* c : recommendedCourses) {
+            vector<int> path = dls.generateLimitedPath(c->id, 4, tempCompleted);
+            for (int id : path) {
+                pathStack.push(id);
+            }
+        }
+
+        currentStudent->schedule = ScheduleGenerator::generateSchedule(recommendedCourses, *currentStudent);
+
+        cout << "  [OK] Learning path generated successfully!\n";
+        cout << "  [OK] Schedule created with " << recommendedCourses.size() << " courses\n";
+        cout << "  [OK] Total weekly commitment: " << currentStudent->schedule.getTotalHours() << " hours\n\n";
+
+        cout << "  Learning Path:\n";
+        vector<int> path = pathStack.getPath();
+        for (size_t i = 0; i < path.size(); i++) {
+            Course* c = courseMap[path[i]];
+            cout << "    " << (i + 1) << ". " << c->name << " (" << difficultyToStr(c->difficulty) << ")\n";
+        }
+
+        cout << "\n================================================\n\n";
+    }
+
+    void completeCourse() {
+        if (!currentStudent) {
+            ui.displayError("No student profile loaded");
+            return;
+        }
+
+        int courseId;
+        double score;
+
+        cout << "Enter course ID to complete: ";
+        cin >> courseId;
+        cout << "Enter your score (0-100): ";
+        cin >> score;
+        cin.ignore();
+
+        Course* course = bst.search(courseId);
+        if (!course) {
+            ui.displayError("Course not found!");
+            return;
+        }
+
+        if (!graph.canTakeCourse(courseId, currentStudent->completedCourses)) {
+            ui.displayError("Prerequisites not met!");
+            return;
+        }
+
+        currentStudent->completeCourse(courseId, course->name, score, course->skills);
+        course->completed = true;
+
+        ui.displaySuccess("Course completed: " + course->name);
+        cout << "  Score: " << score << "/100\n";
+        cout << "  Skills gained: ";
+        for (const string& skill : course->skills) {
+            cout << skill << " ";
+        }
+        cout << "\n\n";
+
+        updateAIScores();
+    }
+
+    void runStudentPortal() {
+        if (!currentStudent) {
+            cout << "\n1. Create New Profile\n2. Load Existing Profile\n3. Back\nChoice: ";
+            int choice;
+            cin >> choice;
+            cin.ignore();
+            
+            if (choice == 1) {
+                createStudent();
+            } else if (choice == 2) {
+                int sid;
+                cout << "Enter student ID: ";
+                cin >> sid;
+                cin.ignore();
+                
+                if (students.find(sid) != students.end()) {
+                    currentStudent = students[sid];
+                    updateAIScores();
+                } else {
+                    ui.displayError("Student not found");
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+
+        while (true) {
+            ui.displayStudentMenu();
+            int choice;
+            cin >> choice;
+            cin.ignore();
+
+            switch (choice) {
+            case 1:
+                currentStudent->displayProfile();
+                ui.waitForEnter();
+                break;
+            case 2:
+                displayAllCourses();
+                ui.waitForEnter();
+                break;
+            case 3:
+                displayRecommendations();
+                ui.waitForEnter();
+                break;
+            case 4:
+                generateCustomizedPlan();
+                ui.waitForEnter();
+                break;
+            case 5:
+                currentStudent->schedule.display();
+                ui.waitForEnter();
+                break;
+            case 6:
+                completeCourse();
+                ui.waitForEnter();
+                break;
+            case 7: {
+                ProgressReport report = currentStudent->generateReport(allCourses.size());
+                report.display();
+                ui.waitForEnter();
+                break;
+            }
+            case 8: {
+                int id;
+                cout << "Enter course ID: ";
+                cin >> id;
+                cin.ignore();
+                Course* c = bst.search(id);
+                if (c) c->display();
+                else ui.displayError("Course not found");
+                ui.waitForEnter();
+                break;
+            }
+            case 9:
+                currentStudent->completedHistory.display();
+                ui.waitForEnter();
+                break;
+            case 10:
+                try {
+                    currentStudent->saveToFile("data/student_" + to_string(currentStudent->id) + ".txt");
+                    ui.displaySuccess("Progress saved successfully!");
+                } catch (exception& e) {
+                    ui.displayError(string("Save failed: ") + e.what());
+                }
+                ui.waitForEnter();
+                break;
+            case 11:
+                currentStudent = nullptr;
+                return;
+            default:
+                ui.displayError("Invalid choice!");
+            }
+        }
+    }
+
+    void runAdminDashboard() {
+        while (true) {
+            ui.displayAdminMenu();
+            int choice;
+            cin >> choice;
+            cin.ignore();
+
+            switch (choice) {
+            case 1:
+                displayAllStudents();
+                ui.waitForEnter();
+                break;
+            case 2:
+                displayAllCourses();
+                ui.waitForEnter();
+                break;
+            case 3:
+                addNewCourse();
+                ui.waitForEnter();
+                break;
+            case 4:
+                removeCourse();
+                ui.waitForEnter();
+                break;
+            case 5:
+                displaySystemStatistics();
+                ui.waitForEnter();
+                break;
+            case 6:
+                updateCourseInfo();
+                ui.waitForEnter();
+                break;
+            case 7:
+                backupAllData();
+                ui.waitForEnter();
+                break;
+            case 8:
+                generateReportsForAll();
+                ui.waitForEnter();
+                break;
+            case 9:
+                loadAllData();
+                ui.waitForEnter();
+                break;
+            case 10:
+                return;
+            default:
+                ui.displayError("Invalid choice!");
+            }
+        }
+    }
+
+    void runDoctorInterface() {
+        while (true) {
+            ui.displayDoctorMenu();
+            int choice;
+            cin >> choice;
+            cin.ignore();
+
+            switch (choice) {
+            case 1:
+                displayAllStudents();
+                ui.waitForEnter();
+                break;
+            case 2:
+                viewStudentProgressReport();
+                ui.waitForEnter();
+                break;
+            case 3:
+                performMentalHealthAssessment();
+                ui.waitForEnter();
+                break;
+            case 4:
+                addMedicalNote();
+                ui.waitForEnter();
+                break;
+            case 5:
+                viewHighStressStudents();
+                ui.waitForEnter();
+                break;
+            case 8:
+                reviewStudentSchedule();
+                ui.waitForEnter();
+                break;
+            case 9:
+                try {
+                    FileManager::saveAllStudents(students);
+                    ui.displaySuccess("Assessment data saved!");
+                } catch (exception& e) {
+                    ui.displayError(string("Save failed: ") + e.what());
+                }
+                ui.waitForEnter();
+                break;
+            case 10:
+                return;
+            default:
+                ui.displayError("Invalid choice!");
+            }
+        }
+    }
+
+    void displayAllCourses() {
+        cout << "\n========== ALL COURSES ==========\n\n";
+        for (Course* c : allCourses) {
+            c->display();
+            cout << "\n";
+        }
+        cout << "=================================\n\n";
+    }
+
+    void displayAllStudents() {
+        cout << "\n========== ALL STUDENTS ==========\n\n";
+        if (students.empty()) {
+            cout << "  No students registered yet.\n";
+        }
+        else {
+            for (auto& pair : students) {
+                pair.second->displayProfile();
+            }
+        }
+        cout << "==================================\n\n";
+    }
+
+    void addNewCourse() {
+        cout << "\n--- Add New Course ---\n";
+        string name, category, instructor, desc;
+        int dur, hrs, diffInt;
+
+        cout << "Course Name: ";
+        getline(cin, name);
+        cout << "Difficulty (0=Beginner, 1=Intermediate, 2=Advanced): ";
+        cin >> diffInt;
+        cout << "Duration (weeks): ";
+        cin >> dur;
+        cin.ignore();
+        cout << "Category: ";
+        getline(cin, category);
+        cout << "Hours per week: ";
+        cin >> hrs;
+        cin.ignore();
+        cout << "Instructor: ";
+        getline(cin, instructor);
+        cout << "Description: ";
+        getline(cin, desc);
+
+        Course* newCourse
+
+            = new Course(nextCourseId++, name, static_cast<Difficulty>(diffInt), dur,
+            category, {}, {}, hrs, instructor);
+        newCourse->description = desc;
+
+        allCourses.push_back(newCourse);
+        courseMap[newCourse->id] = newCourse;
+        graph.addCourse(newCourse->id);
+        bst.insert(newCourse->id, newCourse);
+
+        setupDataStructures();
+        ui.displaySuccess("Course added successfully!");
+        
+        try {
+            FileManager::saveCourses(allCourses);
+        } catch (exception& e) {
+            ui.displayError(string("Failed to save updated courses: ") + e.what());
+        }
+    }
+
+    void removeCourse() {
+        cout << "\n--- Remove Course ---\n";
+        int courseId;
+        cout << "Enter Course ID: ";
+        cin >> courseId;
+        cin.ignore();
+
+        auto it = courseMap.find(courseId);
+        if (it != courseMap.end()) {
+            Course* course = it->second;
+            allCourses.erase(std::remove(allCourses.begin(), allCourses.end(), course), allCourses.end());
+            courseMap.erase(it);
+
+            delete course;
+            setupDataStructures();
+            ui.displaySuccess("Course removed successfully!");
+
+            try {
+                FileManager::saveCourses(allCourses);
+            } catch (exception& e) {
+                ui.displayError(string("Failed to save updated courses: ") + e.what());
+            }
+        } else {
+            ui.displayError("Course not found!");
+        }
+    }
+
+    void displaySystemStatistics() {
+        cout << "\n========== SYSTEM STATISTICS ==========\n";
+        cout << "  Total Courses: " << allCourses.size() << "\n";
+        cout << "  Total Students: " << students.size() << "\n";
+        cout << "========================================\n";
+    }
+
+    void updateCourseInfo() {
+        int courseId;
+        cout << "Enter Course ID to update: ";
+        cin >> courseId;
+        cin.ignore();
+
+        auto it = courseMap.find(courseId);
+        if (it == courseMap.end()) {
+            ui.displayError("Course not found");
+            return;
+        }
+
+        Course* c = it->second;
+        cout << "Updating Course: " << c->name << "\n";
+        cout << "Enter new details (leave blank to keep unchanged):\n";
+
+        string name, instructor, description;
+        int dur, hrs, diffInt;
+
+        cout << "Name (" << c->name << "): ";
+        getline(cin, name);
+        cout << "Instructor (" << c->instructor << "): ";
+        getline(cin, instructor);
+        cout << "Description: ";
+        getline(cin, description);
+        cout << "Duration (weeks, " << c->durationWeeks << "): ";
+        cin >> dur;
+        cout << "Hours/Week (" << c->hoursPerWeek << "): ";
+        cin >> hrs;
+        cout << "Difficulty (0=Beginner, 1=Intermediate, 2=Advanced): ";
+        cin >> diffInt;
+        cin.ignore();
+
+        if (!name.empty()) c->name = name;
+        if (!instructor.empty()) c->instructor = instructor;
+        if (!description.empty()) c->description = description;
+        if (dur > 0) c->durationWeeks = dur;
+        if (hrs > 0) c->hoursPerWeek = hrs;
+        c->difficulty = static_cast<Difficulty>(diffInt);
+
+        setupDataStructures();
+        ui.displaySuccess("Course updated successfully!");
+    }
+
+    void backupAllData() {
+        try {
+            FileManager::saveCourses(allCourses);
+            FileManager::saveAllStudents(students);
+            ui.displaySuccess("All data backed up successfully!");
+        } catch (exception& e) {
+            ui.displayError(string("Backup failed: ") + e.what());
+        }
+    }
+
+    void generateReportsForAll() {
+        cout << "\n--- Generate Reports for All Students ---\n";
+        for (const auto& pair : students) {
+            ProgressReport report = pair.second->generateReport(allCourses.size());
+            report.display();
+        }
+    }
+
+    void loadAllData() {
+        try {
+            allCourses = FileManager::loadCourses();
+            students = FileManager::loadAllStudents();
+            setupDataStructures();
+            ui.displaySuccess("Data loaded successfully!");
+        } catch (exception& e) {
+            ui.displayError(string("Failed to load data: ") + e.what());
+        }
+    }
+
+    void viewStudentProgressReport() {
+        int sid;
+        cout << "Enter Student ID: ";
+        cin >> sid;
+        cin.ignore();
+
+        if (students.find(sid) == students.end()) {
+            ui.displayError("Student not found!");
+            return;
+        }
+
+        ProgressReport report = students[sid]->generateReport(allCourses.size());
+        report.display();
+    }
+    
+    void performMentalHealthAssessment() {
+        int sid;
+        cout << "Enter Student ID for assessment: ";
+        cin >> sid;
+        cin.ignore();
+        
+        auto it = students.find(sid);
+        if (it == students.end()) {
+            ui.displayError("Student not found!");
+            return;
+        }
+        
+        Student* student = it->second;
+        cout << "Performing mental health assessment for " << student->name << "...\n";
+        cout << "Current stress level: " << student->stressLevel << "/10\n";
+
+        int newStressLevel;
+        cout << "Enter new stress level (1-10): ";
+        cin >> newStressLevel;
+        cin.ignore();
+        student->stressLevel = newStressLevel;
+
+        ui.displaySuccess("Assessment updated for " + student->name);
+    }
+
+    void addMedicalNote() {
+        int sid;
+        cout << "Enter Student ID: ";
+        cin >> sid;
+        cin.ignore();
+
+        if (students.find(sid) == students.end()) {
+            ui.displayError("Student not found!");
+            return;
+        }
+
+        string note;
+        cout << "Enter medical note: ";
+        getline(cin, note);
+
+        students[sid]->mentalHealthNote = note;
+        ui.displaySuccess("Medical note added!");
+    }
+
+    void viewHighStressStudents() {
+        cout << "\n--- Students with High Stress Levels ---\n";
+        for (const auto& pair : students) {
+            Student* student = pair.second;
+            if (student->stressLevel >= 7) {
+                cout << student->name << " (" << student->email
+                    << ") - Stress Level: " << student->stressLevel << "\n";
+            }
+        }
+    }
+
+    void reviewStudentSchedule() {
+        int sid;
+        cout << "Enter Student ID: ";
+        cin >> sid;
+        cin.ignore();
+
+        auto it = students.find(sid);
+        if (it == students.end()) {
+            ui.displayError("Student not found!");
+            return;
+        }
+
+        it->second->schedule.display();
+    }
+
+    void run() {
+        ui.displayWelcome();
+        initializeSampleData();
+
+        while (true) {
+            int role = ui.displayRoleSelection();
+
+            switch (role) {
+            case 1:
+                runStudentPortal();
+                break;
+            case 2:
+                runAdminDashboard();
+                break;
+            case 3:
+                runDoctorInterface();
+                break;
+            case 4:
+                cout << "Exiting system. Goodbye!\n";
+                return;
+            default:
+                ui.displayError("Invalid choice!");
+            }
+        }
+    }
+};
+
+// ============ MAIN FUNCTION ============
 int main() {
-    cout<<"Success Placeholder please customize it / "<<endline;
+    LearningPathSystem system;
+    system.run();
+    return 0;
 }
