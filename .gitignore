@@ -1,8 +1,15 @@
 # Build artifacts
 obj/
+build/
 *.o
 eduflow
 *.exe
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile.cmake
 
 # Data files
 data/
