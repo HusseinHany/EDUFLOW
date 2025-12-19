@@ -480,9 +480,8 @@ void LearningPathSystem::addNewCourse() {
     cout << "Description: ";
     getline(cin, desc);
 
-    Course* newCourse
-        = new Course(nextCourseId++, name, static_cast<Difficulty>(diffInt), dur,
-        category, {}, {}, hrs, instructor);
+    Course* newCourse = new Course(nextCourseId++, name, static_cast<Difficulty>(diffInt), dur,
+                                    category, {}, {}, hrs, instructor);
     newCourse->description = desc;
 
     allCourses.push_back(newCourse);
