@@ -84,6 +84,22 @@ make clean
 make rebuild
 ```
 
+### Using CMake
+
+```bash
+# Create build directory
+mkdir build && cd build
+
+# Generate build files
+cmake ..
+
+# Build the project
+make
+
+# Run the application
+./eduflow
+```
+
 ### Manual Compilation
 
 ```bash
