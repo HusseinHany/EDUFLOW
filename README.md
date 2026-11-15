@@ -4,6 +4,12 @@
 
 A comprehensive C++ application for managing personalized learning paths with AI-powered course recommendations, smart scheduling, and multi-role interfaces for students, administrators, and counselors.
 
+<p align="center">
+  <img src="docs/demo.svg" width="760" alt="Recording of EDUFLOW in a terminal: creating a student profile, completing a course, getting recommendations, generating a learning path and a weekly schedule.">
+</p>
+
+<p align="center"><sub>Real output from the program: create a profile, complete a course, get recommendations, generate a learning path and a weekly schedule.</sub></p>
+
 ## Project Structure
 
 ```
