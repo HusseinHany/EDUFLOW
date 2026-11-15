@@ -4,25 +4,30 @@
 
 using namespace std;
 
-WeeklySchedule ScheduleGenerator::generateSchedule(vector<Course*>& courses, Student& student) {
+// Places each course in 2-hour evening blocks, Monday to Friday, starting at
+// 18:00 and moving to a later block once a full week of that block is taken.
+// Every (day, start hour) pair is tried at most once, so the loop always ends:
+// when the week is full, the remaining hours are simply left unscheduled.
+WeeklySchedule ScheduleGenerator::generateSchedule(vector<Course*>& courses, Student& /*student*/) {
     WeeklySchedule schedule;
 
-    int hoursPerDay = max(1, student.availableHours / 5);
-    vector<ScheduleDay> weekdays = {
+    const vector<ScheduleDay> weekdays = {
         ScheduleDay::MONDAY, ScheduleDay::TUESDAY, ScheduleDay::WEDNESDAY,
         ScheduleDay::THURSDAY, ScheduleDay::FRIDAY
     };
+    const vector<int> startHours = { 18, 20, 16, 14, 8, 10 };
+    const int slotLength = 2;
 
-    int dayIndex = 0;
-    int startHour = 18;
+    size_t dayIndex = 0;
+    size_t hourIndex = 0;
 
     for (Course* course : courses) {
-        int hoursNeeded = course->hoursPerWeek;
+        int hoursNeeded = max(0, course->hoursPerWeek);
 
-        while (hoursNeeded > 0 && dayIndex < weekdays.size()) {
-            int hoursThisSlot = min(hoursNeeded, 2);
+        while (hoursNeeded > 0 && hourIndex < startHours.size()) {
+            int hoursThisSlot = min(hoursNeeded, slotLength);
 
-            ScheduleSlot slot(weekdays[dayIndex], startHour, hoursThisSlot,
+            ScheduleSlot slot(weekdays[dayIndex], startHours[hourIndex], hoursThisSlot,
                 course->id, course->name, "Study");
 
             if (schedule.addSlot(slot)) {
@@ -32,8 +37,7 @@ WeeklySchedule ScheduleGenerator::generateSchedule(vector<Course*>& courses, Stu
             dayIndex++;
             if (dayIndex >= weekdays.size()) {
                 dayIndex = 0;
-                startHour = (startHour + 2) % 24;
-                if (startHour < 8) startHour = 18;
+                hourIndex++;
             }
         }
     }

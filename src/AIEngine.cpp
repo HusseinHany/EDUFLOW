@@ -3,7 +3,7 @@
 
 using namespace std;
 
-double AIEngine::calculateAIScore(Course* course, const map<string, int>& studentSkills,
+double AIEngine::calculateAIScore(Course* course, const map<string, int>& /*studentSkills*/,
     SkillLevel skillLevel, string learningGoal,
     int availableHours, vector<int>& completedCourses) {
     double score = 0.0;

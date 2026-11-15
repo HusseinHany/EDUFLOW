@@ -1,5 +1,7 @@
 #include "UtilityFunctions.h"
 #include <sstream>
+#include <iostream>
+#include <cstdlib>
 
 using namespace std;
 
@@ -76,4 +78,38 @@ string trim(const string& str) {
     if (first == string::npos) return "";
     size_t last = str.find_last_not_of(" \t\n\r");
     return str.substr(first, (last - first + 1));
+}
+
+static bool readLine(string& line) {
+    if (!getline(cin, line)) {
+        cout << "\nInput closed. Exiting.\n";
+        exit(0);
+    }
+    return true;
+}
+
+int readInt(int fallback) {
+    string line;
+    readLine(line);
+    try {
+        return stoi(trim(line));
+    } catch (...) {
+        return fallback;
+    }
+}
+
+double readDouble(double fallback) {
+    string line;
+    readLine(line);
+    try {
+        return stod(trim(line));
+    } catch (...) {
+        return fallback;
+    }
+}
+
+int clampInt(int value, int lo, int hi) {
+    if (value < lo) return lo;
+    if (value > hi) return hi;
+    return value;
 }

@@ -1,3 +1,4 @@
+#include "UtilityFunctions.h"
 #include "UIManager.h"
 #include <iostream>
 #include <cstdlib>
@@ -35,8 +36,7 @@ int UIManager::displayRoleSelection() {
     cout << "Enter choice: ";
 
     int choice;
-    cin >> choice;
-    cin.ignore();
+    choice = readInt();
     return choice;
 }
 
@@ -103,5 +103,6 @@ void UIManager::displayInfo(const string& message) {
 
 void UIManager::waitForEnter() {
     cout << "\nPress Enter to continue...";
-    cin.get();
+    string line;
+    getline(cin, line);
 }

@@ -89,13 +89,14 @@ void LearningPathSystem::createStudent() {
     cout << "Enter email: ";
     getline(cin, email);
     cout << "Select skill level (0=Novice, 1=Intermediate, 2=Proficient, 3=Expert): ";
-    cin >> skillLevelInt;
-    cin.ignore();
+    skillLevelInt = readInt();
     cout << "Enter learning goal (programming/web/ml): ";
     getline(cin, goal);
     cout << "Available hours per week: ";
-    cin >> hours;
-    cin.ignore();
+    hours = readInt();
+
+    skillLevelInt = clampInt(skillLevelInt, 0, 3);
+    hours = clampInt(hours, 1, 100);
 
     Student* student = new Student(nextStudentId++, name, email,
         (SkillLevel)skillLevelInt, goal, hours);
@@ -208,14 +209,18 @@ void LearningPathSystem::completeCourse() {
     double score;
 
     cout << "Enter course ID to complete: ";
-    cin >> courseId;
+    courseId = readInt();
     cout << "Enter your score (0-100): ";
-    cin >> score;
-    cin.ignore();
+    score = readDouble();
 
     Course* course = bst.search(courseId);
     if (!course) {
         ui.displayError("Course not found!");
+        return;
+    }
+
+    if (score < 0 || score > 100) {
+        ui.displayError("Score must be between 0 and 100");
         return;
     }
 
@@ -242,16 +247,14 @@ void LearningPathSystem::runStudentPortal() {
     if (!currentStudent) {
         cout << "\n1. Create New Profile\n2. Load Existing Profile\n3. Back\nChoice: ";
         int choice;
-        cin >> choice;
-        cin.ignore();
+        choice = readInt();
         
         if (choice == 1) {
             createStudent();
         } else if (choice == 2) {
             int sid;
             cout << "Enter student ID: ";
-            cin >> sid;
-            cin.ignore();
+            sid = readInt();
             
             if (students.find(sid) != students.end()) {
                 currentStudent = students[sid];
@@ -268,8 +271,7 @@ void LearningPathSystem::runStudentPortal() {
     while (true) {
         ui.displayStudentMenu();
         int choice;
-        cin >> choice;
-        cin.ignore();
+        choice = readInt();
 
         switch (choice) {
         case 1:
@@ -305,8 +307,7 @@ void LearningPathSystem::runStudentPortal() {
         case 8: {
             int id;
             cout << "Enter course ID: ";
-            cin >> id;
-            cin.ignore();
+            id = readInt();
             Course* c = bst.search(id);
             if (c) c->display();
             else ui.displayError("Course not found");
@@ -339,8 +340,7 @@ void LearningPathSystem::runAdminDashboard() {
     while (true) {
         ui.displayAdminMenu();
         int choice;
-        cin >> choice;
-        cin.ignore();
+        choice = readInt();
 
         switch (choice) {
         case 1:
@@ -391,8 +391,7 @@ void LearningPathSystem::runDoctorInterface() {
     while (true) {
         ui.displayDoctorMenu();
         int choice;
-        cin >> choice;
-        cin.ignore();
+        choice = readInt();
 
         switch (choice) {
         case 1:
@@ -466,19 +465,21 @@ void LearningPathSystem::addNewCourse() {
     cout << "Course Name: ";
     getline(cin, name);
     cout << "Difficulty (0=Beginner, 1=Intermediate, 2=Advanced): ";
-    cin >> diffInt;
+    diffInt = readInt();
     cout << "Duration (weeks): ";
-    cin >> dur;
-    cin.ignore();
+    dur = readInt();
     cout << "Category: ";
     getline(cin, category);
     cout << "Hours per week: ";
-    cin >> hrs;
-    cin.ignore();
+    hrs = readInt();
     cout << "Instructor: ";
     getline(cin, instructor);
     cout << "Description: ";
     getline(cin, desc);
+
+    diffInt = clampInt(diffInt, 0, 2);
+    dur = clampInt(dur, 1, 104);
+    hrs = clampInt(hrs, 1, 40);
 
     Course* newCourse = new Course(nextCourseId++, name, static_cast<Difficulty>(diffInt), dur,
                                     category, {}, {}, hrs, instructor);
@@ -503,8 +504,7 @@ void LearningPathSystem::removeCourse() {
     cout << "\n--- Remove Course ---\n";
     int courseId;
     cout << "Enter Course ID: ";
-    cin >> courseId;
-    cin.ignore();
+    courseId = readInt();
 
     auto it = courseMap.find(courseId);
     if (it != courseMap.end()) {
@@ -536,8 +536,7 @@ void LearningPathSystem::displaySystemStatistics() {
 void LearningPathSystem::updateCourseInfo() {
     int courseId;
     cout << "Enter Course ID to update: ";
-    cin >> courseId;
-    cin.ignore();
+    courseId = readInt();
 
     auto it = courseMap.find(courseId);
     if (it == courseMap.end()) {
@@ -559,19 +558,18 @@ void LearningPathSystem::updateCourseInfo() {
     cout << "Description: ";
     getline(cin, description);
     cout << "Duration (weeks, " << c->durationWeeks << "): ";
-    cin >> dur;
+    dur = readInt();
     cout << "Hours/Week (" << c->hoursPerWeek << "): ";
-    cin >> hrs;
+    hrs = readInt();
     cout << "Difficulty (0=Beginner, 1=Intermediate, 2=Advanced): ";
-    cin >> diffInt;
-    cin.ignore();
+    diffInt = readInt();
 
     if (!name.empty()) c->name = name;
     if (!instructor.empty()) c->instructor = instructor;
     if (!description.empty()) c->description = description;
     if (dur > 0) c->durationWeeks = dur;
-    if (hrs > 0) c->hoursPerWeek = hrs;
-    c->difficulty = static_cast<Difficulty>(diffInt);
+    if (hrs > 0) c->hoursPerWeek = clampInt(hrs, 1, 40);
+    if (diffInt >= 0 && diffInt <= 2) c->difficulty = static_cast<Difficulty>(diffInt);
 
     setupDataStructures();
     ui.displaySuccess("Course updated successfully!");
@@ -609,8 +607,7 @@ void LearningPathSystem::loadAllData() {
 void LearningPathSystem::viewStudentProgressReport() {
     int sid;
     cout << "Enter Student ID: ";
-    cin >> sid;
-    cin.ignore();
+    sid = readInt();
 
     if (students.find(sid) == students.end()) {
         ui.displayError("Student not found!");
@@ -624,8 +621,7 @@ void LearningPathSystem::viewStudentProgressReport() {
 void LearningPathSystem::performMentalHealthAssessment() {
     int sid;
     cout << "Enter Student ID for assessment: ";
-    cin >> sid;
-    cin.ignore();
+    sid = readInt();
     
     auto it = students.find(sid);
     if (it == students.end()) {
@@ -639,8 +635,11 @@ void LearningPathSystem::performMentalHealthAssessment() {
 
     int newStressLevel;
     cout << "Enter new stress level (1-10): ";
-    cin >> newStressLevel;
-    cin.ignore();
+    newStressLevel = readInt();
+    if (newStressLevel < 1 || newStressLevel > 10) {
+        ui.displayError("Stress level must be between 1 and 10");
+        return;
+    }
     student->stressLevel = newStressLevel;
 
     ui.displaySuccess("Assessment updated for " + student->name);
@@ -649,8 +648,7 @@ void LearningPathSystem::performMentalHealthAssessment() {
 void LearningPathSystem::addMedicalNote() {
     int sid;
     cout << "Enter Student ID: ";
-    cin >> sid;
-    cin.ignore();
+    sid = readInt();
 
     if (students.find(sid) == students.end()) {
         ui.displayError("Student not found!");
@@ -679,8 +677,7 @@ void LearningPathSystem::viewHighStressStudents() {
 void LearningPathSystem::reviewStudentSchedule() {
     int sid;
     cout << "Enter Student ID: ";
-    cin >> sid;
-    cin.ignore();
+    sid = readInt();
 
     auto it = students.find(sid);
     if (it == students.end()) {
