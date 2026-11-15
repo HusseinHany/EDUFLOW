@@ -49,9 +49,26 @@ string Course::serialize() const {
     return ss.str();
 }
 
+// Splits a saved line on '|' and keeps empty fields. The shared split() drops
+// them, which shifted every later field for a course with no prerequisites.
+static vector<string> splitFields(const string& line) {
+    vector<string> fields;
+    string field;
+    for (char ch : line) {
+        if (ch == '|') {
+            fields.push_back(field);
+            field.clear();
+        } else {
+            field += ch;
+        }
+    }
+    fields.push_back(field);
+    return fields;
+}
+
 Course* Course::deserialize(const string& line) {
-    vector<string> parts = split(line, '|');
-    if (parts.size() < 13) return nullptr;
+    vector<string> parts = splitFields(line);
+    if (parts.size() < 14) return nullptr;
 
     Course* c = new Course();
     c->id = stoi(parts[0]);

@@ -5,6 +5,7 @@
 #include "DepthLimitedSearch.h"
 #include "UtilityFunctions.h"
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <stdexcept>
 #include <cstdlib>
@@ -51,6 +52,12 @@ void LearningPathSystem::initializeSampleData() {
     setupDataStructures();
     ui.displaySuccess("Sample data initialized with 10 courses");
     
+    // Keep an existing courses file. Overwriting it on every start would throw
+    // away courses added in earlier sessions; "Load Data from Files" in the
+    // admin dashboard brings them back.
+    ifstream existing("data/courses.txt");
+    if (existing.good()) return;
+
     try {
         FileManager::saveCourses(allCourses);
     } catch (exception& e) {
@@ -595,8 +602,33 @@ void LearningPathSystem::generateReportsForAll() {
 
 void LearningPathSystem::loadAllData() {
     try {
-        allCourses = FileManager::loadCourses();
-        students = FileManager::loadAllStudents();
+        // Load everything first, and only replace the current data once both
+        // files have been read successfully.
+        vector<Course*> loadedCourses = FileManager::loadCourses();
+        map<int, Student*> loadedStudents;
+        try {
+            loadedStudents = FileManager::loadAllStudents();
+        } catch (...) {
+            for (Course* c : loadedCourses) delete c;
+            throw;
+        }
+
+        for (Course* c : allCourses) delete c;
+        for (auto& pair : students) delete pair.second;
+
+        allCourses = loadedCourses;
+        students = loadedStudents;
+        currentStudent = nullptr;
+        courseMap.clear();
+        pathStack.clear();
+
+        // Continue numbering after the highest loaded ID so new courses and
+        // students do not overwrite loaded ones.
+        nextCourseId = 1;
+        for (Course* c : allCourses) nextCourseId = max(nextCourseId, c->id + 1);
+        nextStudentId = 1;
+        for (auto& pair : students) nextStudentId = max(nextStudentId, pair.first + 1);
+
         setupDataStructures();
         ui.displaySuccess("Data loaded successfully!");
     } catch (exception& e) {
