@@ -10,7 +10,6 @@
 class DepthLimitedSearch {
 private:
     Graph* graph;
-    std::map<int, Course*>* courseMap;
 
     void generatePathRecursive(int courseId, int depth, int limit, std::vector<int>& path,
         std::map<int, bool>& visited, std::vector<int>& completedCourses);

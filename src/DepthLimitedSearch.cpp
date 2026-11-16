@@ -2,7 +2,8 @@
 
 using namespace std;
 
-DepthLimitedSearch::DepthLimitedSearch(Graph* g, map<int, Course*>* cm) : graph(g), courseMap(cm) {}
+// The course map is accepted for compatibility; the search only needs the graph.
+DepthLimitedSearch::DepthLimitedSearch(Graph* g, map<int, Course*>* /*courseMap*/) : graph(g) {}
 
 void DepthLimitedSearch::generatePathRecursive(int courseId, int depth, int limit, vector<int>& path,
     map<int, bool>& visited, vector<int>& completedCourses) {
