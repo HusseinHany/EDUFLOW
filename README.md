@@ -133,6 +133,67 @@ The application provides three main interfaces:
 
 ## Architecture
 
+`LearningPathSystem` owns the data and the data structures; each one has a single job.
+
+```mermaid
+classDiagram
+    direction LR
+    class LearningPathSystem {
+        allCourses: vector~Course*~
+        students: map~int, Student*~
+        run()
+    }
+    class Student {
+        skillLevel
+        learningGoal
+        availableHours
+    }
+    class Course {
+        difficulty
+        hoursPerWeek
+        prerequisites
+    }
+    class AVLTree { courses sorted by AI score }
+    class BST { find a course by ID }
+    class Graph { prerequisite links, cycle check }
+    class PathStack { learning path order }
+    class LinkedList { completed-course history }
+    class WeeklySchedule { slots by day and hour }
+    class AIEngine { calculateAIScore() }
+    class DepthLimitedSearch { generateLimitedPath() }
+    class ScheduleGenerator { generateSchedule() }
+    class FileManager { save and load courses and students }
+    class UIManager { menus and messages }
+
+    LearningPathSystem o-- Course
+    LearningPathSystem o-- Student
+    LearningPathSystem *-- AVLTree
+    LearningPathSystem *-- BST
+    LearningPathSystem *-- Graph
+    LearningPathSystem *-- PathStack
+    LearningPathSystem *-- UIManager
+    Student *-- LinkedList
+    Student *-- WeeklySchedule
+    LearningPathSystem ..> AIEngine : scores courses
+    LearningPathSystem ..> DepthLimitedSearch : builds paths
+    LearningPathSystem ..> ScheduleGenerator : plans the week
+    LearningPathSystem ..> FileManager : persists data
+    DepthLimitedSearch ..> Graph
+```
+
+### How a learning plan is made
+
+```mermaid
+flowchart LR
+    P["Student profile<br/>skill level, goal, hours"] --> S["AIEngine scores<br/>every course"]
+    S --> T["AVL tree keeps<br/>courses sorted by score"]
+    T --> G["Graph keeps only courses<br/>whose prerequisites are done"]
+    G --> D["Depth-limited search<br/>builds the learning path"]
+    D --> W["ScheduleGenerator fills<br/>evening slots, Mon–Fri"]
+```
+
+The score adds up four parts: goal match (35), difficulty match for the student's level (30), whether the weekly hours fit (20) and whether the prerequisites are complete (15).
+
 ### Core Components
 
 - **Enumerations**: Defines difficulty levels, skill levels, user roles, and schedule days
