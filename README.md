@@ -1,5 +1,9 @@
 # EDUFLOW
 
+<p align="center">
+  <a href="https://husseinhany.github.io/#projects"><img src="docs/banner.svg" width="100%" alt="EDUFLOW: a learning path lights up through a graph of courses, from Intro to Deep Learning."></a>
+</p>
+
 **Personalized AI Learning Path Generator**
 
 A comprehensive C++ application for managing personalized learning paths with AI-powered course recommendations, smart scheduling, and multi-role interfaces for students, administrators, and counselors.
