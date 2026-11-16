@@ -199,7 +199,9 @@ void LearningPathSystem::generateCustomizedPlan() {
     cout << "  Learning Path:\n";
     vector<int> path = pathStack.getPath();
     for (size_t i = 0; i < path.size(); i++) {
-        Course* c = courseMap[path[i]];
+        auto found = courseMap.find(path[i]);
+        if (found == courseMap.end() || !found->second) continue;
+        Course* c = found->second;
         cout << "    " << (i + 1) << ". " << c->name << " (" << difficultyToStr(c->difficulty) << ")\n";
     }
 
